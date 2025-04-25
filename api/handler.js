@@ -1,3 +1,5 @@
+
+
 import { setTimeout } from "timers/promises";
 
 const AURA_TRACKER = new Map();
@@ -125,29 +127,25 @@ export default async function handler(req, res) {
     X25EGG: process.env.X25EGG,
   };
 
-try {
-  const webhookTag = determineWebhookTag(name, luckMulti);
-  console.log("Determined webhook tag:", webhookTag);
+  try {
+    const webhookTag = determineWebhookTag(name, luckMulti);
+    if (!webhookTag) return res.status(400).send("Unknown type or luck value");
 
-  if (!webhookTag) return res.status(400).send("Unknown type or luck value");
+    if (webhookTag === "AURA_EGG") {
+      await sendWebhook(TAG_WEBHOOKS.AURA_EGG_P1, embed);
+      await setTimeout(5000);
+      await sendWebhook(TAG_WEBHOOKS.AURA_EGG_P2, embed);
+      await setTimeout(3000);
+      await sendWebhook(TAG_WEBHOOKS.AURA_EGG, embed);
+    } else {
+      await sendWebhook(TAG_WEBHOOKS[webhookTag], embed);
+    }
 
-  if (webhookTag === "AURA_EGG_PRIORITY") {
-    console.log("Sending priority webhooks...");
-    await sendWebhook(TAG_WEBHOOKS.AURA_EGG_P1, embed);
-    await setTimeout(5000);
-    await sendWebhook(TAG_WEBHOOKS.AURA_EGG_P2, embed);
-  } else if (webhookTag === "AURA_EGG") {
-    console.log("Sending normal Aura Egg webhook...");
-    await sendWebhook(TAG_WEBHOOKS.AURA_EGG, embed);
-  } else {
-    console.log("Sending other webhook:", TAG_WEBHOOKS[webhookTag]);
-    await sendWebhook(TAG_WEBHOOKS[webhookTag], embed);
+    return res.status(200).send(`Webhook sent to: ${webhookTag}`);
+  } catch (err) {
+    console.error("Webhook error:", err);
+    return res.status(500).send("Internal Server Error");
   }
-
-  return res.status(200).send(`Webhook sent to: ${webhookTag}`);
-} catch (err) {
-  console.error("Webhook error:", err);
-  return res.status(500).send("Internal Server Error");
 }
 
 async function sendWebhook(url, payload) {
@@ -169,13 +167,13 @@ function getDescription(name) {
   return "A Rare Object Has Been Found!";
 }
 
-function determineWebhookTag(name) {
+function determineWebhookTag(name, luckMulti) {
   const lower = name.toLowerCase();
-
-  if (lower === "auraeggp") return "AURA_EGG_PRIORITY";
-  if (lower === "auraegg") return "AURA_EGG";
   if (lower.includes("royal")) return "ROYAL_CHEST";
-  if (lower.includes("egg") && name.includes("25")) return "X25EGG";
-
+  if (luckMulti === 25) return "X25EGG";
+  if (lower.includes("auraegg")) return "AURA_EGG_P";
+  if (lower.includes("aura")) return "AURA_EGG";
   return null;
 }
+
+
