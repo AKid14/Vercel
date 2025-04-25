@@ -18,8 +18,8 @@ export default async function handler(req, res) {
     placeId,
     jobId,
     height,
-    Players,
-    MaxPlayers,
+    players,
+    maxPlayers,
   } = req.query;
 
   const isValidNumber = (val) => !isNaN(Number(val));
@@ -133,9 +133,9 @@ export default async function handler(req, res) {
 
     if (webhookTag === "AURA_EGG") {
       await sendWebhook(TAG_WEBHOOKS.AURA_EGG_P1, embed);
-      await setTimeout(5000);
+      await new Promise(resolve => setTimeout(resolve, 5000));
       await sendWebhook(TAG_WEBHOOKS.AURA_EGG_P2, embed);
-      await setTimeout(3000);
+      await new Promise(resolve => setTimeout(resolve, 3000));
       await sendWebhook(TAG_WEBHOOKS.AURA_EGG, embed);
     } else {
       await sendWebhook(TAG_WEBHOOKS[webhookTag], embed);
@@ -171,7 +171,7 @@ function determineWebhookTag(name, luckMulti) {
   const lower = name.toLowerCase();
   if (lower.includes("royal")) return "ROYAL_CHEST";
   if (luckMulti === 25) return "X25EGG";
-  if (lower.includes("auraegg")) return "AURA_EGG_P";
+  if (lower.includes("auraeggp")) return "AURA_EGG_P";
   if (lower.includes("aura")) return "AURA_EGG";
   return null;
 }
