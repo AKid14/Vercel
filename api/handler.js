@@ -1,5 +1,3 @@
-
-
 import { setTimeout } from "timers/promises";
 
 const AURA_TRACKER = new Map();
@@ -125,6 +123,7 @@ export default async function handler(req, res) {
     AURA_EGG: process.env.AURA_EGG,
     ROYAL_CHEST: process.env.ROYAL_CHEST,
     X25EGG: process.env.X25EGG,
+    UNDERWORLD: process.env.UNDERWORLD,
   };
 
   try {
@@ -169,11 +168,12 @@ function getDescription(name) {
 
 function determineWebhookTag(name, luckMulti) {
   const lower = name.toLowerCase();
+  if (lower.includes("underworld") && luckMulti===25) return "AURA_EGG";
   if (lower.includes("royal") || lower.includes("dice")) return "ROYAL_CHEST";
   if (luckMulti === 25) return "X25EGG";
   if (lower.includes("auraeggp")) return "AURA_EGG_P";
   if (lower.includes("aura")) return "AURA_EGG";
+  if (lower.includes("underworld")) return "UNDERWORLD";
+  
   return null;
 }
-
-
