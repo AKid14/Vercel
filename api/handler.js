@@ -1,38 +1,11 @@
-import { setTimeout } from "timers/promises";
-
-const AURA_TRACKER = new Map();
-const IP_REQUEST_COUNT = new Map();
-const BANNED_IPS = new Set();
-
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).send("Only POST allowed");
   }
 
-  const {
-    name,
-    expire,
-    luck,
-    placeId,
-    jobId,
-    height,
-    players,
-    maxPlayers,
-  } = req.query;
+  const { name, expire, luck, placeId, jobId, height, players, maxPlayers } = req.query;
 
-  const isValidNumber = (val) => !isNaN(Number(val));
-  const isValidString = (val) => typeof val === "string" && val.trim().length > 0;
-
-  if (
-    !isValidString(name) ||
-    !isValidNumber(expire) ||
-    !isValidNumber(luck) ||
-    !isValidNumber(placeId) ||
-    !isValidString(jobId) ||
-    !isValidNumber(height) ||
-    !isValidNumber(players) || players > 15 || players < 0 || 
-    !isValidNumber(maxPlayers) || maxPlayers > 15 || maxPlayers < 0
-  ) {
+  if (!validateQueryParams(req.query)) {
     return res.status(400).send("Invalid or missing query parameters.");
   }
 
@@ -44,6 +17,13 @@ export default async function handler(req, res) {
     return res.status(403).send("Your IP has been temporarily blocked");
   }
 
+  const RESET_PERIOD = 60 * 60 * 1000;
+  const ipLastRequestTime = IP_REQUEST_COUNT.get(ip)?.timestamp;
+  
+  if (ipLastRequestTime && Date.now() - ipLastRequestTime > RESET_PERIOD) {
+    IP_REQUEST_COUNT.set(ip, { count: 0, timestamp: Date.now() });
+  }
+
   const isAura = name.toLowerCase().includes("aura");
   const jobKey = `${ip}_${jobId}`;
 
@@ -53,13 +33,12 @@ export default async function handler(req, res) {
     }
 
     AURA_TRACKER.set(jobKey, expiresUnix);
-
-    const count = IP_REQUEST_COUNT.get(ip) || 0;
+    const count = (IP_REQUEST_COUNT.get(ip) || 0).count;
     if (count >= 5) {
       BANNED_IPS.add(ip);
       return res.status(403).send("Too many Aura reports. You have been banned.");
     }
-    IP_REQUEST_COUNT.set(ip, count + 1);
+    IP_REQUEST_COUNT.set(ip, { count: count + 1, timestamp: Date.now() });
   }
 
   const now = Math.floor(Date.now() / 1000);
@@ -85,26 +64,10 @@ export default async function handler(req, res) {
         color: 16776963,
         thumbnail: { url: AVATAR_URL },
         fields: [
-          {
-            name: "Server Info",
-            value: `Players: ${players}/${maxPlayers}`,
-            inline: false,
-          },
-          {
-            name: "Rift Info",
-            value: `Luck Multi: ${luckMulti}\nExpires: ${expireRelative}\nHeight: ${heightMeters}`,
-            inline: false,
-          },
-          {
-            name: "Join Script",
-            value: `\`\`\`lua\ngame:GetService("TeleportService"):TeleportToPlaceInstance(${placeId}, "${jobId}")\n\`\`\``,
-            inline: false,
-          },
-          {
-            name: "Server Link",
-            value: `[Click to Join](${joinLink})`,
-            inline: false,
-          },
+          { name: "Server Info", value: `Players: ${players}/${maxPlayers}`, inline: false },
+          { name: "Rift Info", value: `Luck Multi: ${luckMulti}\nExpires: ${expireRelative}\nHeight: ${heightMeters}`, inline: false },
+          { name: "Join Script", value: `\`\`\`lua\ngame:GetService("TeleportService"):TeleportToPlaceInstance(${placeId}, "${jobId}")\n\`\`\``, inline: false },
+          { name: "Server Link", value: `[Click to Join](${joinLink})`, inline: false },
         ],
         footer: {
           text: `Created By SomeRandomIdiot | .gg/UQSSMYuyZf  | ${new Date().toLocaleString()}`,
@@ -119,7 +82,6 @@ export default async function handler(req, res) {
     AURA_EGG: process.env.AURA_EGG,
     ROYAL_CHEST: process.env.ROYAL_CHEST,
     X25EGG: process.env.X25EGG,
-    UNDERWORLD: process.env.UNDERWORLD,
   };
 
   try {
@@ -136,40 +98,9 @@ export default async function handler(req, res) {
       await sendWebhook(TAG_WEBHOOKS[webhookTag], embed);
     }
 
-    return res.status(200).send(`Webhook sent to: ${webhookTag}`);
+    return res.status(200).send(`Webhook sent`);
   } catch (err) {
     console.error("Webhook error:", err);
     return res.status(500).send("Internal Server Error");
   }
-}
-
-async function sendWebhook(url, payload) {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to send webhook: ${response.status}`);
-  }
-}
-
-function getDescription(name) {
-  if (name.toLowerCase().includes("aura")) return "An Aura Egg Has Been Found!";
-  if (name.toLowerCase().includes("royal")) return "A Royal Chest Has Been Found!";
-  if (name.toLowerCase().includes("egg")) return `A(n) ${name} Has Been Found!`;
-  return "A Rare Object Has Been Found!";
-}
-
-function determineWebhookTag(name, luckMulti) {
-  const lower = name.toLowerCase();
-  if (lower.includes("underworld") && luckMulti===25) return "AURA_EGG";
-  if (lower.includes("royal") || lower.includes("dice")) return "ROYAL_CHEST";
-  if (luckMulti === 25) return "X25EGG";
-  if (lower.includes("auraeggp")) return "AURA_EGG_P";
-  if (lower.includes("aura")) return "AURA_EGG";
-  if (lower.includes("underworld")) return "UNDERWORLD";
-  
-  return null;
 }
