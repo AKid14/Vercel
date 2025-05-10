@@ -42,10 +42,6 @@ export default async function handler(req, res) {
   const curTime = Math.floor(Date.now() / 1000);
   const expiresUnix = Math.floor(Number(expire));
 
-  if (expiresUnix < curTime - 660 || expiresUnix > curTime + 660) {
-    return res.status(400).send("Invalid expire time");
-  }
-
   if (BANNED_IPS.has(ip)) {
     return res.status(403).send("Your IP has been temporarily blocked");
   }
@@ -175,4 +171,3 @@ function determineWebhookTag(name, luckMulti) {
   if (lower.includes("aura")) return "AURA_EGG";
   return null;
 }
-
