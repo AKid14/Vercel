@@ -42,9 +42,9 @@ export default async function handler(req, res) {
   const curTime = Math.floor(Date.now() / 1000);
   const expiresUnix = Math.floor(Number(expire));
 
-  if (BANNED_IPS.has(ip)) {
-    return res.status(403).send("Your IP has been temporarily blocked");
-  }
+  // if (BANNED_IPS.has(ip)) {
+//     return res.status(403).send("Your IP has been temporarily blocked");
+//   }
 
   const isAura = name.toLowerCase().includes("aura");
   const jobKey = `${ip}_${jobId}`;
@@ -58,8 +58,8 @@ export default async function handler(req, res) {
 
     const count = IP_REQUEST_COUNT.get(ip) || 0;
     if (count >= 5) {
-      BANNED_IPS.add(ip);
-      return res.status(403).send("Too many Aura reports. You have been banned.");
+      // BANNED_IPS.add(ip);
+//       return res.status(403).send("Too many Aura reports. You have been banned.");
     }
     IP_REQUEST_COUNT.set(ip, count + 1);
   }
